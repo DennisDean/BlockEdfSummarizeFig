@@ -3,7 +3,7 @@ BlockEdfSummarizeFig
 
 Simple interface for summarizing the contents of a folder containing EDFs and XML files
 
-Two or three simple steps
+Only a few simple steps simple steps
 
 1. Select EDF folder
 2. Select folder to write output folder
