@@ -12,7 +12,7 @@ BlockEdfsummarizeFig was initially developed to review the contents of large num
 Only a few simple steps are required
 
 1. Select EDF folder
-2. Select folder to write output folder
+2. Select folder to write generated files
 3. Set output file prefix
 4. Click on 'Signal' to summarize EDF signal content
 5. Click on 'EDF Check' to summarize EDF header and results of EDF check
