@@ -1,7 +1,7 @@
 BlockEdfSummarizeFig
 ====================
 
-Simple interface for summarizing the contents of a folder containing EDFs and XML files. BlockEdfSummarizeFig is part of the [ata Access and Visualization for Sleep Toolbox](https://github.com/DennisDean/DAVS-Toolbox/blob/master/README.md).
+Simple interface for summarizing the contents of a folder containing EDFs and XML files. BlockEdfSummarizeFig is part of the [Data Access and Visualization for Sleep Toolbox](https://github.com/DennisDean/DAVS-Toolbox/blob/master/README.md).
 
 #### Applications
 
@@ -9,7 +9,7 @@ BlockEdfsummarizeFig was initially developed to review the contents of large num
 
 #### Quick Application Steps
 
-Only a few simple steps simple steps
+Only a few simple steps are required
 
 1. Select EDF folder
 2. Select folder to write output folder
