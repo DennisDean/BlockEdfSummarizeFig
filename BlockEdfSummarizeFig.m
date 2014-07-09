@@ -22,7 +22,7 @@ function varargout = BlockEdfSummarizeFig(varargin)
 
 % Edit the above text to modify the response to help BlockEdfSummarizeFig
 
-% Last Modified by GUIDE v2.5 01-May-2014 13:33:21
+% Last Modified by GUIDE v2.5 27-May-2014 13:08:15
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -64,6 +64,7 @@ set(handles.pb_edf_create_file_list, 'enable','off');
 set(handles.pb_create_header_summary, 'enable','off');
 set(handles.pb_create_signal_summary, 'enable','off');
 set(handles.pb_edf_create_summary, 'enable','off');
+set(handles.pb_xml_check, 'enable','off');
 
 % Create 
 handles.summaryFilePath = strcat(cd,'\');
@@ -197,6 +198,7 @@ if folder_name ~= 0
     set(handles.pb_edf_create_summary, 'enable','off');
     set(handles.pb_create_header_summary, 'enable','off');
     set(handles.pb_create_signal_summary, 'enable','off');
+    set(handles.pb_xml_check, 'enable','off');
     
     % Save file information to globals
     handles.edf_pn = strcat(folder_name, handles.pnSeperator);
@@ -247,6 +249,7 @@ summaryFilePath = handles.summaryFilePath;
 handles.edfFileListName = get(handles.e_edf_summary_file_name, 'String');
 edfFileListName = strcat(summaryFilePath, handles.edfFileListName,'_Edf_File_List.xls');
 edf_pn = handles.edf_pn;
+edf_pn = edf_pn(1:end-1);
 edf_FolderName = handles.edf_FolderName;
 
 % Echo Status to console
@@ -266,6 +269,7 @@ set(handles.pb_edf_create_file_list, 'enable','on');
 set(handles.pb_edf_create_summary, 'enable','on');
 set(handles.pb_create_header_summary, 'enable','on');
 set(handles.pb_create_signal_summary, 'enable','on');
+set(handles.pb_xml_check, 'enable','on');
 
 % Update User
 fprintf('File list containing %.0f entries created:\n\t%s\n', ...
@@ -369,3 +373,66 @@ besObj = besObj.summarizeSignalLabels;
 
 % Update User
 fprintf('Signal summary written to:\t%s\n', xlsFileSummaryOut);
+
+
+% --- Executes on button press in pb_xml_check.
+function pb_xml_check_Callback(hObject, eventdata, handles)
+% hObject    handle to pb_xml_check (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% Generate EDF File list
+summaryFilePath = handles.summaryFilePath;
+handles.edfFileListName = get(handles.e_edf_summary_file_name, 'String');
+edfFileListName = strcat(summaryFilePath, handles.edfFileListName,'_Edf_File_List.xls');
+
+% Get Path/File Information
+summaryFilePath = handles.summaryFilePath;
+summaryFileName = get(handles.e_edf_summary_file_name, 'String');
+summaryFileName = strcat(summaryFilePath, summaryFileName,'_XML_Summary.xls');
+
+% XLS File name
+xlsFileList = edfFileListName;
+xlsFileSummaryOut = summaryFileName; 
+
+% Load XML file
+[txt num raw] =  xlsread(xlsFileList);
+xmlFile = raw(2:end, 7);
+xmlPath = raw(2:end, 11);
+numFiles = size(xmlFile, 1);
+% numFiles = 10;
+
+% Check each file
+checkFlags = zeros(numFiles, 1);
+checkMsgs = cell(numFiles,1);
+
+% For each file
+start = 1;
+fprintf('Checking %.0f XML files\n', numFiles);
+tic
+for f = start:numFiles
+    % Processing 
+    % fprintf('%.0f %s\n', f, xmlFileList{f});
+
+    % Create class and load file
+    xmlFn1 = strcat(xmlPath{f}, '\', xmlFile{f});
+    lcaObj = loadCompumedicsAnnotationsClass(xmlFn1);
+    lcaObj.GET_SCORED_EVENTS = 0;
+    lcaObj = lcaObj.loadFile;
+
+    % Save check flag
+    checkFlags(f) = lcaObj.errorFlag;
+    checkMsgs{f} = lcaObj.errorMsg;
+end
+elapseTime = toc;
+% Save checks to file
+resultCell = [num2cell([1:numFiles]'), xmlFile(start:numFiles)];
+resultCell = [resultCell num2cell(checkFlags) checkMsgs];
+resultCell = ...
+   [ {'ID', 'File Name', 'Check Flag', 'Error Msg'};  resultCell];
+xlswrite(summaryFileName, resultCell);
+   
+% Update User
+fprintf('Signal summary written to (%.1f min):\t%s\n', elapseTime/60, xlsFileSummaryOut);
+
