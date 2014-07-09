@@ -5,7 +5,7 @@ Simple interface for summarizing the contents of a folder containing EDFs and XM
 
 #### Applications
 
-BlockEdfsummarizeFig was initially developed to review the contents of large numbers of EDF/XML files. The functional components of the tool have been integrated within batch analysis programs to serve as a pre-run check.  Applying the checks within BlockEdfSummarizeFig is the first step is performing large scale [spectral analysis](http://en.wikipedia.org/wiki/Spectral_estimation). See our [spectral analysis](https://github.com/DennisDean/SpectralTrainFig/blob/master/README.md) program description or our [standard operating procedure](https://github.com/DennisDean/SpectralTrainFig/blob/master/standardOperatingProcedure.md) for performing spectral analysis for additional details.
+BlockEdfsummarizeFig was initially developed to review the contents of large numbers of EDF/XML files. The functional components of the tool have been integrated within batch analysis programs to serve as a pre-run check.  Applying the checks within BlockEdfSummarizeFig is the first step in performing large scale [spectral analysis](http://en.wikipedia.org/wiki/Spectral_estimation). See our [spectral analysis](https://github.com/DennisDean/SpectralTrainFig/blob/master/README.md) program description or our [standard operating procedure](https://github.com/DennisDean/SpectralTrainFig/blob/master/standardOperatingProcedure.md) for performing spectral analysis for additional details.
 
 #### Quick Application Steps
 
