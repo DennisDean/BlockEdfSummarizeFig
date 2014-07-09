@@ -31,4 +31,4 @@ Uses [dirr](http://www.mathworks.com/matlabcentral/fileexchange/8682-dirr--find-
 
 [National Sleep Research Resource](https://sleepdata.org/)
 
-[Authors File Exchange Downloads](http://www.mathworks.com/matlabcentral/fileexchange/authors/my_fileexchange)
+[Author's File Exchange Downloads](http://www.mathworks.com/matlabcentral/fileexchange/authors/my_fileexchange)
