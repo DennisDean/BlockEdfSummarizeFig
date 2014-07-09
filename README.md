@@ -10,6 +10,7 @@ Only a few simple steps simple steps
 3. Set output file prefix
 4. Click on 'Signal' to summarize EDF signal content
 5. Click on 'EDF Check' to summarize EDF header and results of EDF check
+6. Click on 'XML check' to summarize XML load check
 
 
 ### Acknowledgements:
