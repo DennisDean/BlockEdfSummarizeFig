@@ -22,7 +22,7 @@ function varargout = BlockEdfSummarizeFig(varargin)
 
 % Edit the above text to modify the response to help BlockEdfSummarizeFig
 
-% Last Modified by GUIDE v2.5 27-May-2014 13:08:15
+% Last Modified by GUIDE v2.5 04-Nov-2014 08:18:16
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -58,6 +58,7 @@ handles.output = hObject;
 % Clear edit text boxes
 set(handles.e_edf_edf_folder, 'String',' ');
 set(handles.e_edf_summary_file_name, 'String',' ');
+set(handles.e_edf_signal_labels, 'String','{}');
 
 % Inactivate button until data is loaded
 set(handles.pb_edf_create_file_list, 'enable','off');
@@ -253,7 +254,7 @@ edf_pn = edf_pn(1:end-1);
 edf_FolderName = handles.edf_FolderName;
 
 % Echo Status to console
-fprintf('Starting search for EDF files in folder: %s\n\n', ...
+fprintf('\nStarting search for EDF files in folder: %s\n\n', ...
     edf_FolderName);
 
 % Generate Matched files    
@@ -273,7 +274,7 @@ set(handles.pb_xml_check, 'enable','on');
 
 % Update User
 fprintf('File list containing %.0f entries created:\n\t%s\n', ...
-    size(splitFileListCellwLabels{:},1), edfFileListName);
+    size(splitFileListCellwLabels{:},1)-1, edfFileListName);
 
 % Update handles structure
 guidata(hObject, handles);
@@ -297,6 +298,9 @@ summaryFileName = strcat(summaryFilePath, summaryFileName,'_HeaderCheckSummary.x
 % XLS File name
 xlsFileList = edfFileListName;
 xlsFileSummaryOut = summaryFileName; 
+
+% Update user
+fprintf('\nHeader and EDF check initiated\n');
 
 % Create clas
 besObj = BlockEdfSummarizeClass(xlsFileList, xlsFileSummaryOut);
@@ -367,6 +371,9 @@ summaryFileName = strcat(summaryFilePath, summaryFileName,'_HeaderSignalSummary.
 xlsFileList = edfFileListName;
 xlsFileSummaryOut = summaryFileName; 
 
+% Update User
+fprintf('\nSummarizing signal information\n');
+
 % Create clas
 besObj = BlockEdfSummarizeClass(xlsFileList, xlsFileSummaryOut);
 besObj = besObj.summarizeSignalLabels;
@@ -406,6 +413,9 @@ numFiles = size(xmlFile, 1);
 % Check each file
 checkFlags = zeros(numFiles, 1);
 checkMsgs = cell(numFiles,1);
+   
+% Update User
+fprintf('\nInitiating XML summary check\n');
 
 % For each file
 start = 1;
@@ -434,5 +444,63 @@ resultCell = ...
 xlswrite(summaryFileName, resultCell);
    
 % Update User
-fprintf('Signal summary written to (%.1f min):\t%s\n', elapseTime/60, xlsFileSummaryOut);
+fprintf('XML summary check written to (%.1f min):\t%s\n', elapseTime/60, xlsFileSummaryOut);
 
+
+% --- Executes on button press in pb_ed_signal_plus.
+function pb_ed_signal_plus_Callback(hObject, eventdata, handles)
+% hObject    handle to pb_ed_signal_plus (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% Generate EDF File list
+summaryFilePath = handles.summaryFilePath;
+handles.edfFileListName = get(handles.e_edf_summary_file_name, 'String');
+edfFileListName = strcat(summaryFilePath, handles.edfFileListName,'_Edf_File_List.xls');
+
+% Get Path/File Information
+summaryFilePath = handles.summaryFilePath;
+summaryFileName = get(handles.e_edf_summary_file_name, 'String');
+summaryFileName = strcat(summaryFilePath, summaryFileName,'_HeaderSignalSummary.xls');
+
+% XLS File name
+xlsFileList = edfFileListName;
+xlsFileSummaryOut = summaryFileName; 
+
+% Get Signal Summary
+signalLabelSamplingRate = eval(get(handles.e_edf_signal_labels, 'String'));
+
+% Update User
+fprintf('\nSummarizing signal + sampling rate information\n');
+
+% Create clas
+besObj = BlockEdfSummarizeClass(xlsFileList, xlsFileSummaryOut);
+besObj.signalLabelSamplingRate = signalLabelSamplingRate;
+besObj = besObj.summarizeSignalLabelsPlus;
+
+% Update User
+fprintf('Signal summary written to:\t%s\n', xlsFileSummaryOut);
+
+
+
+function e_edf_signal_labels_Callback(hObject, eventdata, handles)
+% hObject    handle to e_edf_signal_labels (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of e_edf_signal_labels as text
+%        str2double(get(hObject,'String')) returns contents of e_edf_signal_labels as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function e_edf_signal_labels_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to e_edf_signal_labels (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

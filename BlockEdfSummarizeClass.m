@@ -400,10 +400,10 @@ classdef BlockEdfSummarizeClass
                     end
                 end
             catch
-                    % Return
-                    errMsg = sprintf('Could not complete EDF processing (%.0f, %s)',...
-                        e, edfFN{e});
-                    warning(errMsg);
+               % Return
+                errMsg = sprintf('Could not complete EDF processing (%.0f, %s)',...
+                   e, edfFN{e});
+                warning(errMsg);
                 return 
             end
             
