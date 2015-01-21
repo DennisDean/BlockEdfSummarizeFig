@@ -63,7 +63,7 @@ function varargout = GetMatchedSleepEdfXmlFiles (varargin)
 % Boston, MA  02149
 %
 % File created: November 25, 2012
-% Last update:  May 1, 2014 
+% Last update:  January 16, 2015 
 %    
 % Copyright © [2013] The Brigham and Women's Hospital, Inc. THE BRIGHAM AND 
 % WOMEN'S HOSPITAL, INC. AND ITS AGENTS RETAIN ALL RIGHTS TO THIS SOFTWARE 
@@ -90,7 +90,7 @@ if nargin == 2
 else
     % Echo functin prototypes to console
     fprintf('\tGetMatchedSleepFiles (SourceFolder, DestinationFolder)\n');
-    fprintf('\matchedFileInfo = GetMatchedSleepFiles (SourceFolder, DestinationFolder)\n');
+    fprintf('\nmatchedFileInfo = GetMatchedSleepFiles (SourceFolder, DestinationFolder)\n');
     error;
 end
 
@@ -98,40 +98,105 @@ end
 fileListCellwLabels = GetEdfFileListInfo(sourceFolder);
 
 % Split files in two
+fnList = fileListCellwLabels(2:end,1);
 oddFiles = [2:2:size(fileListCellwLabels,1)]';
 evenFiles = [3:2:size(fileListCellwLabels,1)]';
 numMatchedFiles = (size(fileListCellwLabels, 1)-1)/2;
 
-% Check match files exist.
-if size(oddFiles,1) ~= size(evenFiles,1)
-    % Echo warning to console
-    warnstr = 'Matched file pairs not found. Check file names.';
-    warning(warnstr);
-    
-    % Create output
-    varargout = {0};
 
-    % Return with out creating an error
-    return
+% ------------------------------------------------- Check for matched pairs
+
+% Try to find matched file pairs
+numOddFiles = length(oddFiles);
+numEvenFiles = length(evenFiles);
+
+% Check for EDF extension
+edfExtF = @(x)strcmp(upper(x(end-3:end)),'.EDF');
+edfExtensionIndex = find(cellfun(edfExtF, fnList));
+
+% Get EDF file prefix
+edfFnPrefixF = @(x)x(1:end-4);
+edfFnList = fnList(edfExtensionIndex);
+edfPrefixStr = cellfun(edfFnPrefixF, edfFnList, ...
+    'UniformOutput', 0);
+
+% Check for XML extension
+xmlExtF = @(x)strcmp(upper(x(end-3:end)),'.XML');
+xmlExtensionIndex = find(cellfun(xmlExtF, fnList));   
+
+% Get XML file prefix
+xmlFnPrefixF = @(x)x(1:end-8);
+xmlFnList = fnList(xmlExtensionIndex);
+xmlPrefixStr = cellfun(xmlFnPrefixF, xmlFnList, ...
+    'UniformOutput', 0);
+
+% check if matched EDF pair exists
+checkForPairF = @(x)find(cell2mat(strfind(xmlPrefixStr, x)));   
+edfPairExists = (cellfun(checkForPairF, edfPrefixStr, ...
+    'UniformOutput', 0));
+edfPairExists = ~cellfun(@isempty, edfPairExists);
+edfPairExistsIndexFlag = edfPairExists > 0;
+
+% check if matched XML pair exists
+checkForPairF = @(x)(cell2mat(strfind(edfPrefixStr, x)));   
+xmlPairExists = (cellfun(checkForPairF, xmlPrefixStr, ...
+    'UniformOutput', 0));
+xmlPairExists = ~cellfun(@isempty, xmlPairExists);
+
+% Create summaries for presentation
+numPairedEdfXmlFiles = sum(1==edfPairExists);
+pairedEdfFileListEntryIndex = edfExtensionIndex(edfPairExists);
+
+% Find matched XML entry
+checkForPairF = @(x)find(~cellfun(@isempty, strfind(xmlPrefixStr,x)));  
+edfPairingExists = cellfun(checkForPairF, edfPrefixStr,  'UniformOutput', 0);
+edfPairXmlFnIndex = ...
+    xmlExtensionIndex(cell2mat(edfPairingExists(edfPairExistsIndexFlag)));
+
+% Identify EDF names and entries that don't have a matched pair 
+if sum(0==edfPairExists)>0
+    % Find EDF's with out pairs
+    edfWithNoPairIndexes = find(0==edfPairExists);
+    numEdfWithNoPairIndexes = length(edfWithNoPairIndexes);
+
+    % Print EDF names for which an XML file could not be found
+    fprintf('EDF File names for which an XML file could not be found\n');
+    for f = 1:numEdfWithNoPairIndexes
+        fprintf('\t%s\n', edfFnList{f})
+    end
+    fprintf ('Number of EDF files for which a matched XML file could not be found: %.0f\n',numEdfWithNoPairIndexes);
 end
 
+% Identify XML names and entries that don't have a matched pair 
+if sum(0==xmlPairExists)>0
+    % Find XML's with out pairs
+    xmlWithNoPairIndexes = find(0==xmlPairExists);
+    numXmlWithNoPairIndexes = length(xmlWithNoPairIndexes);
+
+    % Print EDF names for which an XML file could not be found
+    fprintf('\nXML File names for which an EDF file could not be found\n');
+    for f = 1:numXmlWithNoPairIndexes
+        fprintf('\t%s\n', xmlFnList{f})
+    end
+    fprintf ('Number of XML files for which a matched EDF file could not be found: %.0f\n\n',numXmlWithNoPairIndexes);
+end
+
+%------------------------------------------ Move Filelist in to Output Cell
 % Create matched return
+numMatchedFiles = numPairedEdfXmlFiles;
 numCols = size(fileListCellwLabels, 2);
 splitFileListCellwLabels = cell(numMatchedFiles+1, (2*numCols+1));
 
 % Add Labels
-% labels = fileListCellwLabels(1,:);
-% splitFileListCellwLabels(1, 1) = {'ID'};
-% splitFileListCellwLabels(1, 2:6) = labels;
-% splitFileListCellwLabels(1, 7:11) = labels;
 splitFileListCellwLabels(1,1:end) = tableLabels;
 splitFileListCellwLabels(2:end, 1) = num2cell([1:1:numMatchedFiles]');
 
-
-% Split file information
+% Move file listing information into appropraite slot
 for f = 1:numMatchedFiles
-    splitFileListCellwLabels(1+f,2:6) = fileListCellwLabels(2+(f-1)*2, 1:5);
-    splitFileListCellwLabels(1+f,7:11) = fileListCellwLabels(3+(f-1)*2, 1:5);
+    edfFnIndex = pairedEdfFileListEntryIndex(f);
+    xmlFnIndex = edfPairXmlFnIndex(f);
+    splitFileListCellwLabels(1+f,2:6) = fileListCellwLabels(1+edfFnIndex, 1:5);
+    splitFileListCellwLabels(1+f,7:11) = fileListCellwLabels(1+xmlFnIndex, 1:5);
 end
 
 % Process output

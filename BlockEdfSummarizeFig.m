@@ -22,7 +22,7 @@ function varargout = BlockEdfSummarizeFig(varargin)
 
 % Edit the above text to modify the response to help BlockEdfSummarizeFig
 
-% Last Modified by GUIDE v2.5 04-Nov-2014 08:18:16
+% Last Modified by GUIDE v2.5 20-Jan-2015 14:04:37
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -66,6 +66,9 @@ set(handles.pb_create_header_summary, 'enable','off');
 set(handles.pb_create_signal_summary, 'enable','off');
 set(handles.pb_edf_create_summary, 'enable','off');
 set(handles.pb_xml_check, 'enable','off');
+set(handles.pb_edf_signal_label_summary, 'enable','off');
+set(handles.pb_edf_Signal_Configuration, 'enable','off');
+set(handles.pb_edf_signal_plus, 'enable','off');
 
 % Create 
 handles.summaryFilePath = strcat(cd,'\');
@@ -200,7 +203,10 @@ if folder_name ~= 0
     set(handles.pb_create_header_summary, 'enable','off');
     set(handles.pb_create_signal_summary, 'enable','off');
     set(handles.pb_xml_check, 'enable','off');
-    
+    set(handles.pb_edf_signal_label_summary, 'enable','off');
+    set(handles.pb_edf_Signal_Configuration, 'enable','off');
+    set(handles.pb_edf_signal_plus, 'enable','off');
+
     % Save file information to globals
     handles.edf_pn = strcat(folder_name, handles.pnSeperator);
     handles.edf_FolderName = edf_FolderName;
@@ -271,6 +277,9 @@ set(handles.pb_edf_create_summary, 'enable','on');
 set(handles.pb_create_header_summary, 'enable','on');
 set(handles.pb_create_signal_summary, 'enable','on');
 set(handles.pb_xml_check, 'enable','on');
+set(handles.pb_edf_signal_label_summary, 'enable','on');
+set(handles.pb_edf_Signal_Configuration, 'enable','off');
+set(handles.pb_edf_signal_plus, 'enable','on');
 
 % Update User
 fprintf('File list containing %.0f entries created:\n\t%s\n', ...
@@ -447,9 +456,9 @@ xlswrite(summaryFileName, resultCell);
 fprintf('XML summary check written to (%.1f min):\t%s\n', elapseTime/60, xlsFileSummaryOut);
 
 
-% --- Executes on button press in pb_ed_signal_plus.
-function pb_ed_signal_plus_Callback(hObject, eventdata, handles)
-% hObject    handle to pb_ed_signal_plus (see GCBO)
+% --- Executes on button press in pb_edf_signal_plus.
+function pb_edf_signal_plus_Callback(hObject, eventdata, handles)
+% hObject    handle to pb_edf_signal_plus (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
@@ -462,7 +471,7 @@ edfFileListName = strcat(summaryFilePath, handles.edfFileListName,'_Edf_File_Lis
 % Get Path/File Information
 summaryFilePath = handles.summaryFilePath;
 summaryFileName = get(handles.e_edf_summary_file_name, 'String');
-summaryFileName = strcat(summaryFilePath, summaryFileName,'_HeaderSignalSummary.xls');
+summaryFileName = strcat(summaryFilePath, summaryFileName,'_HeaderSignalPlusSummary.xls');
 
 % XLS File name
 xlsFileList = edfFileListName;
@@ -504,3 +513,46 @@ function e_edf_signal_labels_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in pb_edf_signal_label_summary.
+function pb_edf_signal_label_summary_Callback(hObject, eventdata, handles)
+% hObject    handle to pb_edf_signal_label_summary (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% Generate EDF File list
+summaryFilePath = handles.summaryFilePath;
+handles.edfFileListName = get(handles.e_edf_summary_file_name, 'String');
+edfFileListName = strcat(summaryFilePath, handles.edfFileListName,'_Edf_File_List.xls');
+
+% Get Path/File Information
+summaryFilePath = handles.summaryFilePath;
+summaryFileName = get(handles.e_edf_summary_file_name, 'String');
+summaryFileName = strcat(summaryFilePath, summaryFileName,'_SignalLabelSummary.xls');
+
+% XLS File name
+xlsFileList = edfFileListName;
+xlsFileSummaryOut = summaryFileName; 
+
+% Get Signal Summary
+signalLabelSamplingRate = eval(get(handles.e_edf_signal_labels, 'String'));
+
+% Update User
+fprintf('\nSignal label summary\n');
+
+% Create clas
+besObj = BlockEdfSummarizeClass(xlsFileList, xlsFileSummaryOut);
+besObj.signalLabelSamplingRate = signalLabelSamplingRate;
+besObj = besObj.signalLabelSummary;
+
+% Update User
+fprintf('Signal summary written to:\t%s\n', xlsFileSummaryOut);
+
+
+% --- Executes on button press in pb_edf_Signal_Configuration.
+function pb_edf_Signal_Configuration_Callback(hObject, eventdata, handles)
+% hObject    handle to pb_edf_Signal_Configuration (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)

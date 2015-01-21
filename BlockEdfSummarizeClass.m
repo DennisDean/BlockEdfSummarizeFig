@@ -75,6 +75,10 @@ classdef BlockEdfSummarizeClass
         % Primary input
         xlsFileList                              % File input list
         xlsFileSummaryOut                        % Output file 
+        
+        % Settings accessing sampling rate
+        signalLabelSamplingRate = {};   % Signals to get sampling rate
+        signalLabelSamplingRateVal = [];
     end
     %------------------------------------------------ Dependent Properties
     properties (Dependent = true)
@@ -282,6 +286,7 @@ classdef BlockEdfSummarizeClass
             folderSeparator = obj.folderSeparator;
             signalField = obj.signalField;
             signalsToTestFor = {};
+            sccObj = SetCompositionCountStrClass;
             
             % Process input
             if nargin == 1
@@ -383,6 +388,7 @@ classdef BlockEdfSummarizeClass
                          'UniformOutput', 0); 
                     headerTable(e+1,13:12+length(value)) = (value); 
                     
+                    
                     % Check if signals are present
                     check = 0;
                     if ~isempty(signalsToTestFor)
@@ -400,10 +406,10 @@ classdef BlockEdfSummarizeClass
                     end
                 end
             catch
-               % Return
-                errMsg = sprintf('Could not complete EDF processing (%.0f, %s)',...
-                   e, edfFN{e});
-                warning(errMsg);
+                    % Return
+                    errMsg = sprintf('Could not complete EDF processing (%.0f, %s)',...
+                        e, edfFN{e});
+                    warning(errMsg);
                 return 
             end
             
@@ -429,7 +435,426 @@ classdef BlockEdfSummarizeClass
                 warning(errMsg);
                 return  
             end   
-        end
+        end % End function
+        %------------------------------------ summarizeSignalLabelsPlus
+        function obj = summarizeSignalLabelsPlus(obj, varargin)
+            % Add sampling rate to signal summary
+            % get default
+            folderSeparator = obj.folderSeparator;
+            signalField = obj.signalField;
+            signalsToTestFor = {};
+            
+            % Process input
+            if nargin == 1
+                % Use default field
+            elseif nargin == 2
+               % Get field
+               signalsToTestFor = varargin{1};
+            elseif nargin == 3
+               % Get field
+               signalsToTestFor  = varargin{1};   
+               signalField = varargin{2};              
+            else
+               % prototype not supported
+               fprintf('obj = obj.summarizeSignalLabels\n');
+               fprintf('obj = obj.summarizeSignalLabels(signalsToTestFor)\n');
+               errMsg = 'summarizeSignalField: prototype not supported';
+               warning(errMsg);
+               return
+            end
+            
+            % Program constants
+            
+
+            % File Locations
+            edfFnIndex = obj.edfFnIndex;
+            edfPathIndex = obj.edfPathIndex;
+            xmlFnIndex = obj.xmlFnIndex;  
+            xmlPathIndex = obj.xmlPathIndex;
+
+            % XLS File name
+            xlsFileList = obj.xlsFileList;
+            xlsFileSummaryOut = obj.xlsFileSummaryOut;
+
+            % Load xls file
+            try 
+                [num txt raw] = xlsread(xlsFileList);
+            catch
+                % Return
+                errMsg = 'Could not open EDF/XML file list';
+                warning(errMsg);
+                return
+            end
+            
+            % Prepare contents for summary
+            edfFN = txt(2:end,edfFnIndex);
+            edfPath = strcat(txt(2:end,edfPathIndex), folderSeparator);
+            xmlFN = txt(2:end,xmlFnIndex);
+            xmlPath = strcat(txt(2:end,xmlPathIndex), folderSeparator);
+
+            % Get values
+            numFiles = length(edfFN);
+            
+            try
+                % Process each entry
+                headerTable = cell(numFiles+1,10+2);
+                for e = 1:numFiles
+                    % Load header
+                    edfObj = BlockEdfLoadClass(strcat(edfPath{e}, edfFN{e}));
+                    edfObj.numCompToLoad = 1;   % Don't return object
+                    edfObj = edfObj.blockEdfLoad;
+
+                    % Get header information
+                    headerTable(e+1,1) = {e};
+                    headerTable(e+1,2) = edfFN(e);
+                    headerTable(e+1,3:end) = struct2cell(edfObj.edf.header)'; 
+                end
+            catch
+                    % Return
+                    errMsg = sprintf('Could not complete EDF processing (%.0f, %s)',...
+                        e, edfFN{e});
+                    warning(errMsg);
+                return 
+            end
+            
+            % Repeat but this time get signal information
+            try
+                % Process each entry
+                numSignals = cell2mat(headerTable(2:end,end));
+                maxSignals = max(numSignals);
+                headerTable = cell(numFiles+1,2+10+maxSignals);
+                if ~isempty(signalsToTestFor)
+                    headerTable = cell(numFiles+1,2+10+maxSignals+1);
+                end
+                
+                % Sstore sampling rate if necessary
+                samplingRateEntryCell = {};
+                
+                % Process each file
+                for e = 1:numFiles
+                    % Load header
+                    edfObj = BlockEdfLoadClass(strcat(edfPath{e}, edfFN{e}));
+                    edfObj.numCompToLoad = 2;   % Don't return object
+                    edfObj = edfObj.blockEdfLoad;
+
+                    % Get header information
+                    headerTable(e+1,1) = {e};
+                    headerTable(e+1,2) = edfFN(e);
+                    headerTable(e+1,3:12) = struct2cell(edfObj.edf.header)'; 
+                    
+                    % Get signal header label
+                    N = edfObj.edf.header.num_signals;
+                    value = ...
+                    arrayfun(@(x)getfield(edfObj.edf.signalHeader(x), signalField),[1:N], ...
+                         'UniformOutput', 0); 
+                    headerTable(e+1,13:12+length(value)) = (value); 
+                    
+                    % Check if signals are present
+                    check = 0;
+                    if ~isempty(signalsToTestFor)
+                        intersection = sort(intersect(value, signalsToTestFor));
+                        if length(intersection) == length(signalsToTestFor)
+                            sigs = sort(signalsToTestFor);
+                            cmpF = @(x)strcmp(intersection{x}, sigs{x});
+                            check = arrayfun(cmpF, [1:length(sigs)],...
+                                'uniformOutput', 1);
+                            check = floor(sum(double(check))/length(check));
+                        end
+                        
+                        % Set check value
+                        headerTable(e+1,end) = {check}; 
+                    end
+                    
+                    % Check if sampling rate is requested
+                    if ~isempty(obj.signalLabelSamplingRate)
+
+                        % Get sampling rate
+                        samplingRateEntry = cell(1, 2*length(obj.signalLabelSamplingRate));
+                        for q = 1:length(obj.signalLabelSamplingRate)
+                            % Get sampling rate
+                            curLab = obj.signalLabelSamplingRate{q};
+                            signalIndexF = find(strcmp(edfObj.signal_labels,curLab));
+                            
+                            if ~isempty(signalIndexF)
+                                signalLabelSamplingRateVal(q) = edfObj.sample_rate(signalIndexF);
+
+                                % Save information
+                                samplingRateEntry{(q-1)*2+1} = curLab;
+                                samplingRateEntry{(q-1)*2+2} = signalLabelSamplingRateVal(q);
+                            end
+                        end
+                        
+                        % Save entry
+                        samplingRateEntryCell = [samplingRateEntryCell;samplingRateEntry];
+                    end
+                end
+            catch
+                    % Return
+                    errMsg = sprintf('Could not complete EDF processing (%.0f, %s)',...
+                        e, edfFN{e});
+                    warning(errMsg);
+                return 
+            end
+            
+            % Get signal and sampling rate inforamtion
+            try
+                
+            catch
+                
+            end
+            
+            % Add header labels
+            try
+                % Add headers
+                headerTable(1,1) = {'File ID'};
+                headerTable(1,2) = {'Edf FN'};
+                headerTable(1,3:12) = fieldnames(edfObj.edf.header)';
+                headerTable(1,13) = {signalField};
+                
+                % Check label if completed
+                if ~isempty(signalsToTestFor)
+                    headerTable(1,end) = {'Signal Check'}; 
+                end
+                
+                % Signal sampling rate if needed
+                if ~isempty(obj.signalLabelSamplingRate)
+                    samplingRateEntryCell = ...
+                        [cell(1,length(samplingRateEntryCell(1,:)));
+                         samplingRateEntryCell];
+                    headerTable = [headerTable, samplingRateEntryCell];
+                end
+                
+                % XLS Write
+                xlswrite(xlsFileSummaryOut, headerTable);
+            catch
+                % Return
+                errMsg = sprintf('Could not write output file (%s)',...
+                    xlsFileSummaryOut);
+                warning(errMsg);
+                return  
+            end   
+        end % End function
+        %----------------------------------------------- signalLabelSummary
+        function obj = signalLabelSummary(obj, varargin)
+            % Add sampling rate to signal summary
+            % get default
+            folderSeparator = obj.folderSeparator;
+            signalField = obj.signalField;
+            signalsToTestFor = {};
+            sccObj = SetCompositionCountStrClass;
+            
+            % Process input
+            if nargin == 1
+                % Use default field
+            elseif nargin == 2
+               % Get field
+               signalsToTestFor = varargin{1};
+            elseif nargin == 3
+               % Get field
+               signalsToTestFor  = varargin{1};   
+               signalField = varargin{2};              
+            else
+               % prototype not supported
+               fprintf('obj = obj.summarizeSignalLabels\n');
+               fprintf('obj = obj.summarizeSignalLabels(signalsToTestFor)\n');
+               errMsg = 'summarizeSignalField: prototype not supported';
+               warning(errMsg);
+               return
+            end
+            
+            % Program constants
+            
+
+            % File Locations
+            edfFnIndex = obj.edfFnIndex;
+            edfPathIndex = obj.edfPathIndex;
+            xmlFnIndex = obj.xmlFnIndex;  
+            xmlPathIndex = obj.xmlPathIndex;
+
+            % XLS File name
+            xlsFileList = obj.xlsFileList;
+            xlsFileSummaryOut = obj.xlsFileSummaryOut;
+
+            % Load xls file
+            try 
+                [num txt raw] = xlsread(xlsFileList);
+            catch
+                % Return
+                errMsg = 'Could not open EDF/XML file list';
+                warning(errMsg);
+                return
+            end
+            
+            % Prepare contents for summary
+            edfFN = txt(2:end,edfFnIndex);
+            edfPath = strcat(txt(2:end,edfPathIndex), folderSeparator);
+            xmlFN = txt(2:end,xmlFnIndex);
+            xmlPath = strcat(txt(2:end,xmlPathIndex), folderSeparator);
+
+            % Get values
+            numFiles = length(edfFN);
+            
+            try
+                % Process each entry
+                headerTable = cell(numFiles+1,10+2);
+                for e = 1:numFiles
+                    % Load header
+                    edfObj = BlockEdfLoadClass(strcat(edfPath{e}, edfFN{e}));
+                    edfObj.numCompToLoad = 1;   % Don't return object
+                    edfObj = edfObj.blockEdfLoad;
+
+                    % Get header information
+                    headerTable(e+1,1) = {e};
+                    headerTable(e+1,2) = edfFN(e);
+                    headerTable(e+1,3:end) = struct2cell(edfObj.edf.header)'; 
+                end
+            catch
+                    % Return
+                    errMsg = sprintf('Could not complete EDF processing (%.0f, %s)',...
+                        e, edfFN{e});
+                    warning(errMsg);
+                return 
+            end
+            
+            % Repeat but this time get signal information
+            try
+                % Process each entry
+                numSignals = cell2mat(headerTable(2:end,end));
+                maxSignals = max(numSignals);
+                headerTable = cell(numFiles+1,2+10+maxSignals);
+                if ~isempty(signalsToTestFor)
+                    headerTable = cell(numFiles+1,2+10+maxSignals+1);
+                end
+                
+                % Sstore sampling rate if necessary
+                samplingRateEntryCell = {};
+                
+                % Process each file
+                for e = 1:numFiles
+                    % Load header
+                    edfObj = BlockEdfLoadClass(strcat(edfPath{e}, edfFN{e}));
+                    edfObj.numCompToLoad = 2;   % Don't return object
+                    edfObj = edfObj.blockEdfLoad;
+
+                    % Get header information
+                    headerTable(e+1,1) = {e};
+                    headerTable(e+1,2) = edfFN(e);
+                    headerTable(e+1,3:12) = struct2cell(edfObj.edf.header)'; 
+                    
+                    % Get signal header label
+                    N = edfObj.edf.header.num_signals;
+                    value = ...
+                    arrayfun(@(x)getfield(edfObj.edf.signalHeader(x), signalField),[1:N], ...
+                         'UniformOutput', 0); 
+                    headerTable(e+1,13:12+length(value)) = (value); 
+                    
+                    % Create a unique signal label list
+                    sccObj = sccObj.AddSet(value);   
+                    % sccObj = sccObj.echoSetConfigurationsToConsole;
+                    % sccObj = sccObj.echoUniqueEntriesToConsole;
+                    % entryTotals = length(sccObj.entryTotals)
+                    % uniqueEntries = length(sccObj.uniqueEntries)
+    
+                    % Check if signals are present
+                    check = 0;
+                    if ~isempty(signalsToTestFor)
+                        intersection = sort(intersect(value, signalsToTestFor));
+                        if length(intersection) == length(signalsToTestFor)
+                            sigs = sort(signalsToTestFor);
+                            cmpF = @(x)strcmp(intersection{x}, sigs{x});
+                            check = arrayfun(cmpF, [1:length(sigs)],...
+                                'uniformOutput', 1);
+                            check = floor(sum(double(check))/length(check));
+                        end
+                        
+                        % Set check value
+                        headerTable(e+1,end) = {check}; 
+                    end
+                    
+                    % Check if sampling rate is requested
+                    if ~isempty(obj.signalLabelSamplingRate)
+
+                        % Get sampling rate
+                        samplingRateEntry = cell(1, 2*length(obj.signalLabelSamplingRate));
+                        for q = 1:length(obj.signalLabelSamplingRate)
+                            % Get sampling rate
+                            curLab = obj.signalLabelSamplingRate{q};
+                            signalIndexF = find(strcmp(edfObj.signal_labels,curLab));
+                            
+                            if ~isempty(signalIndexF)
+                                signalLabelSamplingRateVal(q) = edfObj.sample_rate(signalIndexF);
+
+                                % Save information
+                                samplingRateEntry{(q-1)*2+1} = curLab;
+                                samplingRateEntry{(q-1)*2+2} = signalLabelSamplingRateVal(q);
+                            end
+                        end
+                        
+                        % Save entry
+                        samplingRateEntryCell = [samplingRateEntryCell;samplingRateEntry];
+                    end
+                end
+            catch
+                    % Return
+                    errMsg = sprintf('Could not complete EDF processing (%.0f, %s)',...
+                        e, edfFN{e});
+                    warning(errMsg);
+                return 
+            end
+            
+            % Get signal and sampling rate inforamtion
+            try
+                
+            catch
+                
+            end
+            
+            % Add header labels
+            try
+                % Add headers
+                headerTable(1,1) = {'File ID'};
+                headerTable(1,2) = {'Edf FN'};
+                headerTable(1,3:12) = fieldnames(edfObj.edf.header)';
+                headerTable(1,13) = {signalField};
+                
+                % Check label if completed
+                if ~isempty(signalsToTestFor)
+                    headerTable(1,end) = {'Signal Check'}; 
+                end
+                
+                % Signal sampling rate if needed
+                if ~isempty(obj.signalLabelSamplingRate)
+                    samplingRateEntryCell = ...
+                        [cell(1,length(samplingRateEntryCell(1,:)));
+                         samplingRateEntryCell];
+                    headerTable = [headerTable, samplingRateEntryCell];
+                end
+                
+                % Create New Signal List with Count
+                entryTotals = sccObj.entryTotals;
+                uniqueEntries = sccObj.uniqueEntries;
+                numEntryTotals = length(entryTotals);
+                numUniqueEntries = (uniqueEntries);
+    
+                % Define output table
+                headerTable = cell(numEntryTotals+1, 3);
+                headerTable{1,1} = 'Label';
+                headerTable{1,2} = 'Label';
+                headerTable{1,3} = 'Count';
+                headerTable(2:end,1) = num2cell([1:1:numEntryTotals]');
+                headerTable(2:end,2) = uniqueEntries;
+                headerTable(2:end,3) = num2cell(entryTotals);
+                
+                % XLS Write
+                xlswrite(xlsFileSummaryOut, headerTable);
+            catch
+                % Return
+                errMsg = sprintf('Could not write output file (%s)',...
+                    xlsFileSummaryOut);
+                warning(errMsg);
+                return  
+            end   
+        end % End function
     end
     %---------------------------------------------------- Private functions
     methods (Access=protected)
@@ -438,8 +863,8 @@ classdef BlockEdfSummarizeClass
     %------------------------------------------------- Dependent Properties
     methods   
     end
+    %---------------------------------------------------- Static Properties
     methods(Static)
-
     end
 end
 
