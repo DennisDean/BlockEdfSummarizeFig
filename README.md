@@ -1,14 +1,18 @@
 BlockEdfSummarizeFig
 ====================
 
-Interface for summarizing the contents of a folder containing EDFs and XML files. BlockEdfSummarizeFig is part of the [Data Access and Visualization for Sleep Toolbox](https://github.com/DennisDean/DAVS-Toolbox/blob/master/README.md).
+Interface for summarizing the contents of a folder containing EDFs and XML files. 
 
 #### Questions
 Please post questions at https://sleepdata.org/forum
 
 #### Applications
 
-BlockEdfsummarizeFig was initially developed to review the contents of large numbers of EDF/XML files. The functional components of the tool have been integrated within batch analysis programs to serve as a pre-run check.  Applying the checks within BlockEdfSummarizeFig is the first step in performing large scale [spectral analysis](http://en.wikipedia.org/wiki/Spectral_estimation). See our [spectral analysis](https://github.com/DennisDean/SpectralTrainFig/blob/master/README.md) program description or our [standard operating procedure](https://github.com/DennisDean/SpectralTrainFig/blob/master/standardOperatingProcedure.md) for performing spectral analysis for additional details.
+BlockEdfSummarizeFig has been used as data checkig tool and to prepare for signal analysis projects. The tools is designed to work with data available by the [National Sleep Research Resource](https://sleepdata.org/about). EDF and XML checking are included to insure the files are accessible prior to analyis. The ability to list signal labels and sampling rates provide a way to check contents prior to large scale signal processing projects.
+
+The functional components of the tool have been integrated within batch analysis programs to serve as a pre-run check.  Applying the checks within BlockEdfSummarizeFig is the first step in performing large scale [spectral analysis](http://en.wikipedia.org/wiki/Spectral_estimation). See our [spectral analysis](https://github.com/DennisDean/SpectralTrainFig/blob/master/README.md) program description or our [standard operating procedure](https://github.com/DennisDean/SpectralTrainFig/blob/master/standardOperatingProcedure.md) for performing spectral analysis for additional details.
+
+BlockEdfSummarizeFig is part of the [Data Access and Visualization for Sleep Toolbox](https://github.com/DennisDean/DAVS-Toolbox/blob/master/README.md).
 
 #### Quick Application Steps
 
