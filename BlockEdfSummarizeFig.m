@@ -22,7 +22,7 @@ function varargout = BlockEdfSummarizeFig(varargin)
 
 % Edit the above text to modify the response to help BlockEdfSummarizeFig
 
-% Last Modified by GUIDE v2.5 20-Jan-2015 14:04:37
+% Last Modified by GUIDE v2.5 03-Feb-2015 09:31:08
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -57,8 +57,10 @@ handles.output = hObject;
 
 % Clear edit text boxes
 set(handles.e_edf_edf_folder, 'String',' ');
+set(handles.e_edf_xml_folder, 'String',' ');
 set(handles.e_edf_summary_file_name, 'String',' ');
 set(handles.e_edf_signal_labels, 'String','{}');
+set(handles.e_edf_segment_variable, 'String','{}');
 
 % Inactivate button until data is loaded
 set(handles.pb_edf_create_file_list, 'enable','off');
@@ -69,11 +71,16 @@ set(handles.pb_xml_check, 'enable','off');
 set(handles.pb_edf_signal_label_summary, 'enable','off');
 set(handles.pb_edf_Signal_Configuration, 'enable','off');
 set(handles.pb_edf_signal_plus, 'enable','off');
+set(handles.pb_edf_segment_file_list, 'enable','off');
 
 % Create 
+handles.edf_folder_selected = 0;
+handles.xml_folder_selected = 0;
 handles.summaryFilePath = strcat(cd,'\');
 handles.edf_pn = strcat(cd,'\');
 handles.edf_FolderName = '';
+handles.xml_pn = strcat(cd,'\');
+handles.xml_FolderName = '';
 handles.pnSeperator = '\';
 handles.summaryFileName = '';
 handles.splitFileListCellwLabels = {};
@@ -184,6 +191,9 @@ folder_name = uigetdir(start_path, dialog_title);
 
 % check if user selected a file
 if folder_name ~= 0
+    % Set flag
+    handles.edf_folder_selected = 1;
+    
     % Get folder name
     k = strfind(folder_name, handles.pnSeperator);
     edf_FolderName = folder_name(k(end)+1:end);
@@ -197,16 +207,21 @@ if folder_name ~= 0
     set(handles.e_edf_summary_file_name, 'String', summaryFileName);
     handles.edfFileListName = strcat(edf_FolderName, '.EdfFileList.xls');
 
-    % Turn on buttons
-    set(handles.pb_edf_create_file_list, 'enable','on');
-    set(handles.pb_edf_create_summary, 'enable','off');
-    set(handles.pb_create_header_summary, 'enable','off');
-    set(handles.pb_create_signal_summary, 'enable','off');
-    set(handles.pb_xml_check, 'enable','off');
-    set(handles.pb_edf_signal_label_summary, 'enable','off');
-    set(handles.pb_edf_Signal_Configuration, 'enable','off');
-    set(handles.pb_edf_signal_plus, 'enable','off');
-
+    % Turn on buttons if both the EDF and XML flags are set
+    if and (handles.edf_folder_selected == 1, ...
+            handles.xml_folder_selected == 1);
+        % Turn on buttons
+        set(handles.pb_edf_create_file_list, 'enable','on');
+        set(handles.pb_edf_create_summary, 'enable','off');
+        set(handles.pb_create_header_summary, 'enable','off');
+        set(handles.pb_create_signal_summary, 'enable','off');
+        set(handles.pb_xml_check, 'enable','off');
+        set(handles.pb_edf_signal_label_summary, 'enable','off');
+        set(handles.pb_edf_Signal_Configuration, 'enable','off');
+        set(handles.pb_edf_signal_plus, 'enable','off');
+        set(handles.pb_edf_segment_file_list, 'enable','off');
+    end
+    
     % Save file information to globals
     handles.edf_pn = strcat(folder_name, handles.pnSeperator);
     handles.edf_FolderName = edf_FolderName;
@@ -259,14 +274,22 @@ edf_pn = handles.edf_pn;
 edf_pn = edf_pn(1:end-1);
 edf_FolderName = handles.edf_FolderName;
 
+% Get XML file information
+xml_pn = handles.xml_pn;
+xml_pn = xml_pn(1:end-1);
+xml_FolderName = handles.xml_FolderName;
+
 % Echo Status to console
-fprintf('\nStarting search for EDF files in folder: %s\n\n', ...
+fprintf('\nStarting search for EDF files in folder: %s\n', ...
     edf_FolderName);
+% Echo Status to console
+fprintf('Starting search for XML files in folder: %s\n\n', ...
+    xml_FolderName);
 
 % Generate Matched files    
-GetMatchedSleepEdfXmlFiles(edf_pn, edfFileListName);
+GetMatchedSleepEdfXmlFiles(edf_pn, edfFileListName, xml_pn);
 splitFileListCellwLabels = ...
-        GetMatchedSleepEdfXmlFiles(edf_pn, edfFileListName);
+        GetMatchedSleepEdfXmlFiles(edf_pn, edfFileListName, xml_pn);
     
 % Save file list
 handles.splitFileListCellwLabels = splitFileListCellwLabels;
@@ -280,6 +303,7 @@ set(handles.pb_xml_check, 'enable','on');
 set(handles.pb_edf_signal_label_summary, 'enable','on');
 set(handles.pb_edf_Signal_Configuration, 'enable','off');
 set(handles.pb_edf_signal_plus, 'enable','on');
+set(handles.pb_edf_segment_file_list, 'enable','on');
 
 % Update User
 fprintf('File list containing %.0f entries created:\n\t%s\n', ...
@@ -556,3 +580,152 @@ function pb_edf_Signal_Configuration_Callback(hObject, eventdata, handles)
 % hObject    handle to pb_edf_Signal_Configuration (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+
+function e_edf_segment_variable_Callback(hObject, eventdata, handles)
+% hObject    handle to e_edf_segment_variable (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of e_edf_segment_variable as text
+%        str2double(get(hObject,'String')) returns contents of e_edf_segment_variable as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function e_edf_segment_variable_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to e_edf_segment_variable (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in pb_edf_segment_file_list.
+function pb_edf_segment_file_list_Callback(hObject, eventdata, handles)
+% hObject    handle to pb_edf_segment_file_list (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Get Path/File Information
+summaryFilePath = handles.summaryFilePath;
+handles.edfFileListName = get(handles.e_edf_summary_file_name, 'String');
+edfFileListName = strcat(summaryFilePath, handles.edfFileListName,'_Edf_File_List.xls');
+edfFileListNamePrefix = strcat(summaryFilePath, handles.edfFileListName,'_Edf_File_List');
+
+% Generate EDF File list
+summaryFilePath = handles.summaryFilePath;
+handles.edfFileListName = get(handles.e_edf_summary_file_name, 'String');
+edfFileListName = strcat(summaryFilePath, handles.edfFileListName,'_Edf_File_List.xls');
+
+% Get Path/File Information
+summaryFilePath = handles.summaryFilePath;
+summaryFileName = get(handles.e_edf_summary_file_name, 'String');
+summaryFileName = strcat(summaryFilePath, summaryFileName,'_FilePartitionSummary.xls');
+
+% XLS File name
+xlsFileList = edfFileListName;
+xlsFileSummaryOut = summaryFileName; 
+
+% Get Signal Summary
+filePartitioningLabel = eval(get(handles.e_edf_segment_variable, 'String'));
+
+% Update User
+fprintf('\nSegmenting file list\n');
+
+% Create clas
+besObj = BlockEdfSummarizeClass(xlsFileList, xlsFileSummaryOut);
+besObj.filePartitioningLabel = filePartitioningLabel;
+besObj.splitFileListCellwLabels = handles.splitFileListCellwLabels;
+besObj.edfFileListNamePrefix = edfFileListNamePrefix;
+besObj = besObj.segmentFileList;
+file_segmentation_completed = besObj.file_segmentation_completed;
+
+% Update User
+if file_segmentation_completed == 1
+    fprintf('Segmented files written to:\t%s\n', edfFileListNamePrefix);
+else
+    fprintf('Could not segment file list\n');
+end
+
+
+
+function e_edf_xml_folder_Callback(hObject, eventdata, handles)
+% hObject    handle to e_edf_xml_folder (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of e_edf_xml_folder as text
+%        str2double(get(hObject,'String')) returns contents of e_edf_xml_folder as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function e_edf_xml_folder_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to e_edf_xml_folder (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in pb_edf_select_xml_folder.
+function pb_edf_select_xml_folder_Callback(hObject, eventdata, handles)
+% hObject    handle to pb_edf_select_xml_folder (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% Default to current EDF path
+current_xml_path = handles.xml_pn;
+
+% Open folder dialog box
+start_path = current_xml_path;
+dialog_title = 'Select XML directory';
+folder_name = uigetdir(start_path, dialog_title);
+
+% check if user selected a file
+if folder_name ~= 0
+    % Set flag
+    handles.xml_folder_selected = 1;
+    
+    % Get folder name
+    k = strfind(folder_name, handles.pnSeperator);
+    xml_FolderName = folder_name(k(end)+1:end);
+    
+    % Write file name to dialog box
+    set(handles.e_edf_xml_folder, 'String', xml_FolderName);
+
+    
+    % Turn on buttons if both the EDF and XML flags are set
+    if and (handles.edf_folder_selected == 1, ...
+            handles.xml_folder_selected == 1);   
+        % Turn on buttons
+        set(handles.pb_edf_create_file_list, 'enable','on');
+        set(handles.pb_edf_create_summary, 'enable','off');
+        set(handles.pb_create_header_summary, 'enable','off');
+        set(handles.pb_create_signal_summary, 'enable','off');
+        set(handles.pb_xml_check, 'enable','off');
+        set(handles.pb_edf_signal_label_summary, 'enable','off');
+        set(handles.pb_edf_Signal_Configuration, 'enable','off');
+        set(handles.pb_edf_signal_plus, 'enable','off');
+        set(handles.pb_edf_segment_file_list, 'enable','off');
+    end
+    
+    % Save file information to globals
+    handles.xml_pn = strcat(folder_name, handles.pnSeperator);
+    handles.xml_FolderName = xml_FolderName;
+    
+    % Save new varaibles
+    guidata(hObject, handles);
+end
+
+
+

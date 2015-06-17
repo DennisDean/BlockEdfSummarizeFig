@@ -76,9 +76,21 @@ classdef BlockEdfSummarizeClass
         xlsFileList                              % File input list
         xlsFileSummaryOut                        % Output file 
         
+        % Check values
+        checkValues = [];        
+        
         % Settings accessing sampling rate
         signalLabelSamplingRate = {};   % Signals to get sampling rate
         signalLabelSamplingRateVal = [];
+        
+        % File Partitioning varible
+        filePartitioningLabel = {};     % Partition on signal sampling rate
+        splitFileListCellwLabels = {};  % File list variable
+        edfFileListNamePrefix = '';     % Multiple file prefix
+        fileNameCell = {};              % Cell of multiple file locations
+        fileListCell = {};              % Files for each cell  
+        uniqueSamplingRates = [];       % unique sampling rates
+        file_segmentation_completed = 0;% Flag to test for success
     end
     %------------------------------------------------ Dependent Properties
     properties (Dependent = true)
@@ -414,6 +426,7 @@ classdef BlockEdfSummarizeClass
             end
             
             % Add header labels
+            checkValues = [];
             try
                 % Add headers
                 headerTable(1,1) = {'File ID'};
@@ -424,6 +437,8 @@ classdef BlockEdfSummarizeClass
                 % Check label if completed
                 if ~isempty(signalsToTestFor)
                     headerTable(1,end) = {'Signal Check'}; 
+                    checkValues = cell2mat(headerTable(2:end,end));
+                    obj.checkValues = checkValues;
                 end
                 
                 % XLS Write
@@ -851,6 +866,252 @@ classdef BlockEdfSummarizeClass
                 % Return
                 errMsg = sprintf('Could not write output file (%s)',...
                     xlsFileSummaryOut);
+                warning(errMsg);
+                return  
+            end   
+        end % End function
+        %-------------------------------------------------- segmentFileList
+        function obj = segmentFileList(obj, varargin)
+            % Add sampling rate to signal summary
+            % get default
+            folderSeparator = obj.folderSeparator;
+            signalField = obj.signalField;
+            signalsToTestFor = {};
+            
+            % Process input
+            if nargin == 1
+                % Use default field
+            elseif nargin == 2
+               % Get field
+               signalsToTestFor = varargin{1};
+            elseif nargin == 3
+               % Get field
+               signalsToTestFor  = varargin{1};   
+               signalField = varargin{2};              
+            else
+               % prototype not supported
+               fprintf('obj = obj.summarizeSignalLabels\n');
+               fprintf('obj = obj.summarizeSignalLabels(signalsToTestFor)\n');
+               errMsg = 'summarizeSignalField: prototype not supported';
+               warning(errMsg);
+               return
+            end
+            
+            % Program constants
+            if isempty(obj.filePartitioningLabel)
+                % Return if template is empty
+                msg = 'Set the signal label prior to segmenting file list';
+                fprintf('%s\n', msg);
+                return
+            end
+
+            % File Locations
+            edfFnIndex = obj.edfFnIndex;
+            edfPathIndex = obj.edfPathIndex;
+            xmlFnIndex = obj.xmlFnIndex;  
+            xmlPathIndex = obj.xmlPathIndex;
+
+            % XLS File name
+            xlsFileList = obj.xlsFileList;
+            xlsFileSummaryOut = obj.xlsFileSummaryOut;
+
+            % Load xls file
+            try 
+                [num txt raw] = xlsread(xlsFileList);
+            catch
+                % Return
+                errMsg = 'Could not open EDF/XML file list';
+                warning(errMsg);
+                return
+            end
+            
+            % Prepare contents for summary
+            edfFN = txt(2:end,edfFnIndex);
+            edfPath = strcat(txt(2:end,edfPathIndex), folderSeparator);
+            xmlFN = txt(2:end,xmlFnIndex);
+            xmlPath = strcat(txt(2:end,xmlPathIndex), folderSeparator);
+
+            % Get values
+            numFiles = length(edfFN);
+            
+            try
+                % Process each entry
+                headerTable = cell(numFiles+1,10+2);
+                for e = 1:numFiles
+                    % Load header
+                    edfObj = BlockEdfLoadClass(strcat(edfPath{e}, edfFN{e}));
+                    edfObj.numCompToLoad = 1;   % Don't return object
+                    edfObj = edfObj.blockEdfLoad;
+
+                    % Get header information
+                    headerTable(e+1,1) = {e};
+                    headerTable(e+1,2) = edfFN(e);
+                    headerTable(e+1,3:end) = struct2cell(edfObj.edf.header)'; 
+                end
+            catch
+                    % Return
+                    errMsg = sprintf('Could not complete EDF processing (%.0f, %s)',...
+                        e, edfFN{e});
+                    warning(errMsg);
+                return 
+            end
+            
+            % Repeat but this time get signal information
+            try
+                % Process each entry
+                numSignals = cell2mat(headerTable(2:end,end));
+                maxSignals = max(numSignals);
+                headerTable = cell(numFiles+1,2+10+maxSignals);
+                if ~isempty(signalsToTestFor)
+                    headerTable = cell(numFiles+1,2+10+maxSignals+1);
+                end
+                
+                % Sstore sampling rate if necessary
+                samplingRateEntryCell = {};
+                
+                % Process each file
+                for e = 1:numFiles
+                    % Load header
+                    edfObj = BlockEdfLoadClass(strcat(edfPath{e}, edfFN{e}));
+                    edfObj.numCompToLoad = 2;   % Don't return object
+                    edfObj = edfObj.blockEdfLoad;
+
+                    % Get header information
+                    headerTable(e+1,1) = {e};
+                    headerTable(e+1,2) = edfFN(e);
+                    headerTable(e+1,3:12) = struct2cell(edfObj.edf.header)'; 
+                    
+                    % Get signal header label
+                    N = edfObj.edf.header.num_signals;
+                    value = ...
+                    arrayfun(@(x)getfield(edfObj.edf.signalHeader(x), signalField),[1:N], ...
+                         'UniformOutput', 0); 
+                    headerTable(e+1,13:12+length(value)) = (value); 
+                    
+                    % Check if signals are present
+                    check = 0;
+                    if ~isempty(signalsToTestFor)
+                        intersection = sort(intersect(value, signalsToTestFor));
+                        if length(intersection) == length(signalsToTestFor)
+                            sigs = sort(signalsToTestFor);
+                            cmpF = @(x)strcmp(intersection{x}, sigs{x});
+                            check = arrayfun(cmpF, [1:length(sigs)],...
+                                'uniformOutput', 1);
+                            check = floor(sum(double(check))/length(check));
+                        end
+                        
+                        % Set check value
+                        headerTable(e+1,end) = {check}; 
+                    end
+                    
+                    % Check if sampling rate is requested
+                    if and(~isempty(obj.filePartitioningLabel), ...
+                           length(obj.filePartitioningLabel) == 1);
+
+                        % Get sampling rate
+                        samplingRateEntry = cell(1, 2*length(obj.filePartitioningLabel));
+                        for q = 1:length(obj.filePartitioningLabel)
+                            % Get sampling rate
+                            curLab = obj.filePartitioningLabel{q};
+                            signalIndexF = find(strcmp(edfObj.signal_labels,curLab));
+                            
+                            if ~isempty(signalIndexF)
+                                signalLabelSamplingRateVal(q) = edfObj.sample_rate(signalIndexF);
+
+                                % Save information
+                                samplingRateEntry{(q-1)*2+1} = curLab;
+                                samplingRateEntry{(q-1)*2+2} = signalLabelSamplingRateVal(q);
+                            end
+                        end
+                        
+                        % Save entry
+                        samplingRateEntryCell = [samplingRateEntryCell;samplingRateEntry];
+                    end
+                end
+            catch
+                    % Return
+                    errMsg = sprintf('Could not complete EDF processing (%.0f, %s)',...
+                        e, edfFN{e});
+                    warning(errMsg);
+                return 
+            end
+            
+            % Get signal and sampling rate inforamtion
+            fileListCell = {};
+            fileNameCell = {};
+            try
+                % Process file input
+                if and(~isempty(obj.filePartitioningLabel), ...
+                       length(obj.filePartitioningLabel)== 1);
+                   
+                    % Identify Sampling Rate Information
+                    samplingRates = cell2mat(samplingRateEntryCell(:,2));
+                    uniqueSamplingRates = unique(samplingRates);
+                    numUniqueSamplingRates = length(uniqueSamplingRates);
+
+                    % Create sampling rate masks
+                    samplingRateMasks = ...
+                        zeros(length(samplingRates),numUniqueSamplingRates);
+                    for s = 1:numUniqueSamplingRates
+                        samplingRateMasks(:,s) = ...
+                            samplingRates == uniqueSamplingRates(s);
+                    end
+                    samplingRateMasks = logical(samplingRateMasks);
+                    
+                    % Split file
+                    if ~isempty(obj.splitFileListCellwLabels)
+                        % Get file information                        
+                        splitFileListCellwLabels = obj.splitFileListCellwLabels{1};
+                        fileLables = splitFileListCellwLabels(1,:);
+                        fileListCellMaster = ...
+                            splitFileListCellwLabels(2:end,:);
+                        
+                        % Divide the file list into components by sampling
+                        % rate
+                        fileListCell = cell(numUniqueSamplingRates,1);
+                        fileNameCell = cell(numUniqueSamplingRates,1);
+                        for s = 1:numUniqueSamplingRates
+                            % Split file name list
+                            fileListCell{s} = ...
+                                [ fileLables; ...
+                                  fileListCellMaster( samplingRateMasks(:,s), :) ];
+                        
+                            % Generate names
+                            newfn = sprintf('%s_%.0f_%.0f_.xls', ...
+                                obj.edfFileListNamePrefix, ...
+                                s, uniqueSamplingRates(s));
+                            fileNameCell{s} = newfn;
+                        end
+                    end
+                   
+                    % Save information for access by analysis programs
+                    obj.fileNameCell =  fileNameCell;
+                    obj.fileListCell = fileListCell;
+                    obj.uniqueSamplingRates = uniqueSamplingRates;
+                end
+                
+                % Set flag
+                obj.file_segmentation_completed = 1;
+            catch
+                % Produce output
+                errMsg = 'Could not produce multiple file output';
+                warning(errMsg);
+            end
+            
+            % Write files to disk
+            try
+                % Divide the file list into components by sampling
+                % rate
+                for s = 1:numUniqueSamplingRates
+                    % Split file name list
+                    nextXlsFn = fileNameCell{s}; 
+                    nextFileList = fileListCell{s};
+                    xlswrite(nextXlsFn, nextFileList);
+                end
+            catch
+                % Return
+                errMsg = sprintf('Could not write output file (%s)',...
+                    obj.edfFileListNamePrefix);
                 warning(errMsg);
                 return  
             end   

@@ -85,14 +85,28 @@ tableLabels = {'ID', ...
 
 % Process input
 if nargin == 2
+    % Use same varaibles for EDF and XML folder
     sourceFolder = varargin{1};
     destFolder = varargin{2};
+    
+    % Set XML folder
+    xmlSourceFolder = sourceFolder;
+elseif nargin == 3
+    % Use different folders for EDF and XML folders 
+    % EDF Variables
+    sourceFolder = varargin{1};
+    destFolder = varargin{2};
+    
+    % XML Variables
+    xmlSourceFolder = varargin{3};
 else
     % Echo functin prototypes to console
     fprintf('\tGetMatchedSleepFiles (SourceFolder, DestinationFolder)\n');
     fprintf('\nmatchedFileInfo = GetMatchedSleepFiles (SourceFolder, DestinationFolder)\n');
     error;
 end
+
+%----------------------------------------------- Search EDF and XML folders
 
 % Search source folder
 fileListCellwLabels = GetEdfFileListInfo(sourceFolder);
@@ -103,12 +117,15 @@ oddFiles = [2:2:size(fileListCellwLabels,1)]';
 evenFiles = [3:2:size(fileListCellwLabels,1)]';
 numMatchedFiles = (size(fileListCellwLabels, 1)-1)/2;
 
+% Search XML source folder
+xmlFileListCellwLabels = GetXmlFileListInfo(xmlSourceFolder);
+xmlFnList = xmlFileListCellwLabels(2:end,1);
 
 % ------------------------------------------------- Check for matched pairs
 
-% Try to find matched file pairs
-numOddFiles = length(oddFiles);
-numEvenFiles = length(evenFiles);
+% % Try to find matched file pairs
+% numOddFiles = length(oddFiles);
+% numEvenFiles = length(evenFiles);
 
 % Check for EDF extension
 edfExtF = @(x)strcmp(upper(x(end-3:end)),'.EDF');
@@ -119,14 +136,15 @@ edfFnPrefixF = @(x)x(1:end-4);
 edfFnList = fnList(edfExtensionIndex);
 edfPrefixStr = cellfun(edfFnPrefixF, edfFnList, ...
     'UniformOutput', 0);
+edfPrefixLength = length(edfPrefixStr{1});
 
 % Check for XML extension
 xmlExtF = @(x)strcmp(upper(x(end-3:end)),'.XML');
-xmlExtensionIndex = find(cellfun(xmlExtF, fnList));   
+xmlExtensionIndex = find(cellfun(xmlExtF, xmlFnList));   
 
 % Get XML file prefix
-xmlFnPrefixF = @(x)x(1:end-8);
-xmlFnList = fnList(xmlExtensionIndex);
+xmlFnPrefixF = @(x)x(1:edfPrefixLength);
+xmlFnList = xmlFnList(xmlExtensionIndex);
 xmlPrefixStr = cellfun(xmlFnPrefixF, xmlFnList, ...
     'UniformOutput', 0);
 
@@ -196,7 +214,7 @@ for f = 1:numMatchedFiles
     edfFnIndex = pairedEdfFileListEntryIndex(f);
     xmlFnIndex = edfPairXmlFnIndex(f);
     splitFileListCellwLabels(1+f,2:6) = fileListCellwLabels(1+edfFnIndex, 1:5);
-    splitFileListCellwLabels(1+f,7:11) = fileListCellwLabels(1+xmlFnIndex, 1:5);
+    splitFileListCellwLabels(1+f,7:11) = xmlFileListCellwLabels(1+xmlFnIndex, 1:5);
 end
 
 % Process output
@@ -316,6 +334,110 @@ function varargout = GetEdfFileListInfo(varargin)
         end
     end
 end
+%----------------------------------------------------------- GetXmlFileList
+function varargout = GetXmlFileList(folder)
+    % Get EDF file information
+    fileListCellwLabels = GetXmlFileListInfo(folder);
+    fileListCell = fileListCellwLabels(2:end,:);
 
+    % Generate file list 
+    fileList = arrayfun(...
+        @(x)strcat(fileListCell{x,end},'\',fileListCell{x,1}), ...
+            [1:size(fileListCell,1)], 'UniformOutput', false);
+    fn = fileListCell(:,1);
+
+    % Return content determined by number of calling arguments    
+    if nargout == 1
+        varargout{1} = fileList;
+    elseif nargout == 2
+        varargout{1} = fileList;
+        varargout{2} = fn;
+    else
+        fprintf('filelist = obj.GetEdfFileList(folder)\n');
+        fprintf('[filelist fn] = obj.GetEdfFileList(folder)\n');
+        msg = 'Number of output arguments not supported';
+        error(msg);
+    end
+end
+%------------------------------------------------------- GetXmlFileListInfo
+function varargout = GetXmlFileListInfo(varargin)
+    % Create default value
+    value = [];
+    folderPath = '';
+    xlsOut = 'edfFileList.xls';
+
+    % Process input
+    if nargin ==0
+        % Open window
+        folderPath = uigetdir(cd,'Set EDF search folder');    
+        if folderPath == 0
+            error('User did not select folder');
+        end
+    elseif nargin == 1
+        % Set EDF search path
+        folderPath = varargin{1};
+    else
+        fprintf('fileStruct = obj.locateEDFs(path| )\n');
+    end
+
+    % Get File List
+    fileTree  = dirr(folderPath, '\.xml');
+    [fileList fileLabels]= flattenFileTree(fileTree, folderPath);
+    fileList = [fileLabels;fileList];
+
+    % Write output to xls file
+    if nargout == 0
+        xlsOut = strcat(folderPath, '\', xlsOut);
+        xlswrite('xmlFileList.xls',[fileLabels;fileList]);
+    else
+        varargout{1} = fileList;
+    end
+
+    %---------------------------------------------- FlattenFileTree
+    function varargout = flattenFileTree(fileTree, folder)
+        % Process recursive structure created by dirr (See MATLAB Central)
+        % find directory and file entries
+        dirMask = arrayfun(@(x)isstruct(fileTree(x).isdir) == 1, ...
+            [1:length(fileTree)]);
+        fileMask = ~dirMask;
+
+        % Recurse on each directory entry
+        fileListD = {};
+        if sum(int16(dirMask)) > 0
+           dirIndex = find(dirMask);
+           for d = dirIndex
+               folderR = strcat(folder,'\',fileTree(d).name);
+               fileListR = flattenFileTree(fileTree(d).isdir, folderR);
+               fileListD = [fileListD; fileListR];
+           end 
+        end
+
+        % Merge current and recursive list
+        fileList = {};
+        if sum(int16(fileMask)) > 0
+           fileIndex = find(fileMask);
+           for f = fileIndex
+               entry = {fileTree(f).name ...
+                        fileTree(f).date  ...
+                        fileTree(f).bytes  ...
+                        fileTree(f).datenum ...
+                        folder};
+               fileList = [fileList; entry];
+           end   
+        end
+
+        % Merg diretory and file list
+        fileList = [fileList; fileListD];
+
+        % Pass file list labels on export
+        if nargout == 1
+            varargout{1} = fileList;
+        elseif nargout == 2
+            varargout{1} = fileList;
+            varargout{2} = ...
+                {'name', 'date', 'bytes',  'datenum', 'folder'};
+        end
+    end
+end
 end
 
