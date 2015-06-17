@@ -1,7 +1,10 @@
 BlockEdfSummarizeFig
 ====================
 
-Simple interface for summarizing the contents of a folder containing EDFs and XML files. BlockEdfSummarizeFig is part of the [Data Access and Visualization for Sleep Toolbox](https://github.com/DennisDean/DAVS-Toolbox/blob/master/README.md).
+Interface for summarizing the contents of a folder containing EDFs and XML files. BlockEdfSummarizeFig is part of the [Data Access and Visualization for Sleep Toolbox](https://github.com/DennisDean/DAVS-Toolbox/blob/master/README.md).
+
+#### Questions
+Please post questions at https://sleepdata.org/forum
 
 #### Applications
 
@@ -12,15 +15,20 @@ BlockEdfsummarizeFig was initially developed to review the contents of large num
 Only a few simple steps are required
 
 1. Select EDF folder
+2. Select the XML folder
 2. Select folder to write generated files
 3. Set output file prefix
 4. Click on 'Signal' to summarize EDF signal content
 5. Click on 'EDF Check' to summarize EDF header and results of EDF check
 6. Click on 'XML check' to summarize XML load check
+7. Click on 'Signal' to list signal labels for each sleep file
+8. Click on 'Signal Label Summary' to list the signal labels and counts within the dataset
+9. Click on 'Signal Plus' after entering one or more signal labels {'C3','C4'} to list signal sampling rates
+10. Click on 'Segment File List' after entering a signal label {'C3'} to generate a seperate file for each sampling rate.
 
 #### Limitations
 
-Program expects a file structure such that for every *.EDF there is an *.EDF.XML file in the same folder.
+This version removes the limitation that the file structure is organized such that for every *.EDF there is an *.EDF.XML file in the same folder. The XML files are assumed to be written in the compumedics format.
 
 #### Acknowledgements:
 
@@ -32,3 +40,4 @@ Uses [dirr](http://www.mathworks.com/matlabcentral/fileexchange/8682-dirr--find-
 [National Sleep Research Resource](https://sleepdata.org/)
 
 [Author's File Exchange Downloads](http://www.mathworks.com/matlabcentral/fileexchange/authors/my_fileexchange)
+
