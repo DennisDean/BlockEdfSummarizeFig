@@ -41,7 +41,12 @@ Uses [dirr](http://www.mathworks.com/matlabcentral/fileexchange/8682-dirr--find-
 
 #### Related Links
 
-[National Sleep Research Resource](https://sleepdata.org/)
+[National Sleep Research Resource (https://sleepdata.org/)](https://sleepdata.org/)
 
-[Author's File Exchange Downloads](http://www.mathworks.com/matlabcentral/fileexchange/authors/my_fileexchange)
+[Author's File Exchange Downloads (http://www.mathworks.com/matlabcentral/fileexchange/authors/my_fileexchange)](http://www.mathworks.com/matlabcentral/fileexchange/authors/my_fileexchange)
+
+[Data Access and Visualization for Sleep Toolbox](https://github.com/DennisDean/DAVS-Toolbox/blob/master/README.md)
+
+[SpectralTrainFig](http://www.mathworks.com/matlabcentral/fileexchange/49852-spectraltrainfig)
+
 
