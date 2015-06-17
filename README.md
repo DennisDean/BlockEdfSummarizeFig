@@ -45,8 +45,8 @@ Uses [dirr](http://www.mathworks.com/matlabcentral/fileexchange/8682-dirr--find-
 
 [Author's File Exchange Downloads (http://www.mathworks.com/matlabcentral/fileexchange/authors/my_fileexchange)](http://www.mathworks.com/matlabcentral/fileexchange/authors/my_fileexchange)
 
-[Data Access and Visualization for Sleep Toolbox](https://github.com/DennisDean/DAVS-Toolbox/blob/master/README.md)
+[Data Access and Visualization for Sleep Toolbox(https://github.com/DennisDean/DAVS-Toolbox/blob/master/README.md)](https://github.com/DennisDean/DAVS-Toolbox/blob/master/README.md)
 
-[SpectralTrainFig](http://www.mathworks.com/matlabcentral/fileexchange/49852-spectraltrainfig)
+[SpectralTrainFig (http://www.mathworks.com/matlabcentral/fileexchange/49852-spectraltrainfig)](http://www.mathworks.com/matlabcentral/fileexchange/49852-spectraltrainfig)
 
 
